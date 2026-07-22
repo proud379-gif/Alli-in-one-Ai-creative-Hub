@@ -137,12 +137,6 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
         groundingChunks: result.groundingChunks || [],
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, aiMsg]);
-    } catch (err) {
-      const errText = err.message === 'GEMINI_NOT_INITIALIZED'
-        ? '⚠️ ยังไม่ได้ตั้งค่า API Key — กรุณากด "ตั้งค่า API Key" ที่มุมบนขวา แล้วลองใหม่ครับ'
-        : `❌ เกิดข้อผิดพลาด: ${err.message || 'Unknown error'}\n\nโปรดตรวจสอบ API Key และลองใหม่อีกครั้งครับ`;
-
       setMessages(prev => [...prev, {
         id: Date.now() + 2,
         sender: 'ai',
@@ -154,7 +148,7 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
       setIsTyping(false);
       setStreamingText('');
     }
-  }, [input, isTyping, messages, selectedModel, useWebSearch, currentModelObj]);
+  }, [input, isTyping, messages, selectedModel, useWebSearch, currentModelObj, pendingImage]);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -172,8 +166,9 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
   };
 
   const renderText = (text) => {
-    // Simple markdown-like rendering
+    if (!text) return '';
     return text
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:#22d3ee;text-decoration:underline;font-weight:600;">$1 🔗</a>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`([^`]+)`/g, '<code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:0.88em;">$1</code>')
@@ -216,7 +211,7 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
             }}
           >
             <Globe size={13} />
-            Google Search {useWebSearch ? 'ON ✓' : 'OFF'}
+            Google Search {useWebSearch ? 'ON ✓ (ค้นหาข้อมูลสดจากเว็บ)' : 'OFF'}
           </button>
         </div>
 
@@ -252,6 +247,7 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {messages.map((msg) => {
           const isAi = msg.sender === 'ai';
+          const isSourcesExpanded = expandedSources[msg.id] !== false; // default expanded
           return (
             <div
               key={msg.id}
@@ -307,7 +303,7 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
                         </span>
                         {msg.usedSearch && (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.7rem', color: '#22d3ee', background: 'rgba(6,182,212,0.12)', padding: '1px 6px', borderRadius: '999px', border: '1px solid rgba(6,182,212,0.25)' }}>
-                            <Globe size={10} /> ค้นหาจาก Google
+                            <Globe size={10} /> ค้นหาจริงจาก Google
                           </span>
                         )}
                       </div>
@@ -339,21 +335,21 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
                     </div>
                   )}
 
-              {/* Message Content */}
+                  {/* Message Content */}
                   <div dangerouslySetInnerHTML={{ __html: renderText(msg.text) }} />
 
                   {/* Grounding Sources */}
                   {msg.groundingChunks?.length > 0 && (
-                    <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '10px' }}>
+                    <div style={{ marginTop: '14px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
                       <button
-                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#22d3ee', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', marginBottom: expandedSources[msg.id] ? '8px' : 0 }}
+                        onClick={() => setExpandedSources(prev => ({ ...prev, [msg.id]: !isSourcesExpanded }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#22d3ee', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', marginBottom: isSourcesExpanded ? '8px' : 0 }}
                       >
-                        <Globe size={13} />
-                        แหล่งอ้างอิง ({msg.groundingChunks.length})
-                        {expandedSources[msg.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        <Globe size={14} />
+                        📚 แหล่งอ้างอิงข้อมูลจริงจากเว็บ ({msg.groundingChunks.length})
+                        {isSourcesExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                       </button>
-                      {expandedSources[msg.id] && (
+                      {isSourcesExpanded && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {msg.groundingChunks.map((chunk, ci) => (
                             <a
@@ -361,10 +357,14 @@ export default function ChatView({ selectedModel, onOpenApiKey }) {
                               href={chunk.web?.uri || '#'}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', padding: '6px 10px', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)' }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#a5b4fc', background: 'rgba(99,102,241,0.12)', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.25)', textDecoration: 'none', transition: 'all 0.2s' }}
+                              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#22d3ee'; e.currentTarget.style.color = '#fff'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.25)'; e.currentTarget.style.color = '#a5b4fc'; }}
                             >
-                              <ExternalLink size={11} />
-                              {chunk.web?.title || chunk.web?.uri || 'แหล่งอ้างอิง'}
+                              <ExternalLink size={12} color="#22d3ee" />
+                              <span style={{ fontWeight: 600, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {chunk.web?.title || chunk.web?.uri || `แหล่งอ้างอิง #${ci + 1}`}
+                              </span>
                             </a>
                           ))}
                         </div>

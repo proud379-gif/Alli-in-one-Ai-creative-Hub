@@ -42,7 +42,7 @@ function resolveModelName(modelId) {
 
 /**
  * ส่งข้อความ (+ รูปภาพ) ไปยัง Gemini พร้อม Google Search Grounding
- * รองรับ Streaming + Multimodal (Text + Image)
+ * รองรับ Streaming + Multimodal (Text + Image) สำหรับทุกหัวข้อความรู้
  */
 export async function sendChatMessage(history, newMessage, modelId, useWebSearch, onStream, imageBase64 = null, imageMimeType = null) {
   if (!genaiClient) throw new Error('GEMINI_NOT_INITIALIZED');
@@ -50,11 +50,22 @@ export async function sendChatMessage(history, newMessage, modelId, useWebSearch
   const geminiModelName = resolveModelName(modelId);
   const tools = useWebSearch ? [{ googleSearch: {} }] : [];
 
-  const systemInstruction = `คุณคือ NovaAI Assistant ผู้ช่วย AI ระดับสูงสุดของ NovaAI Studio
-ตอบคำถามได้ทุกภาษา โดยเฉพาะภาษาไทยและภาษาอังกฤษ
-เมื่อผู้ใช้ส่งรูปภาพมา ให้วิเคราะห์รูปอย่างละเอียดและตอบคำถามที่เกี่ยวข้อง
-เมื่อค้นหาข้อมูลจากอินเตอร์เน็ต ให้อ้างอิงแหล่งที่มาด้วยเสมอ
-ตอบแบบละเอียด ชัดเจน มีความเป็นมืออาชีพสูงสุด ไม่มีข้อจำกัดด้านความยาวคำตอบ`;
+  const systemInstruction = `คุณคือ AllInStudio AI (ผู้ช่วยปัญญาประดิษฐ์อัจฉริยะแบบรอบรู้ทุกด้าน)
+คุณตอบคำถามได้ทุกภาษา โดยเฉพาะภาษาไทยและภาษาอังกฤษ
+คุณสามารถตอบคำถาม วิเคราะห์ข้อมูล ให้ความรู้ และแก้ปัญหาได้ทุกเรื่องอย่างรอบรู้ โดยไม่จำกัดเฉพาะเรื่องเทคโนโลยีหรือการเขียนโค้ด!
+หัวข้อที่คุณพร้อมตอบอย่างเชี่ยวชาญ ได้แก่:
+1. ความรู้ทั่วไป, ประวัติศาสตร์, สังคมศาสตร์, ภูมิศาสตร์, ปรัชญา
+2. อาหาร, สูตรการทำอาหาร, โภชนาการ, การดูแลสุขภาพและการแพทย์เบื้องต้น
+3. การท่องเที่ยว, ศิลปวัฒนธรรม, ภาษา, วรรณกรรม, ดนตรี
+4. ธุรกิจ, การเงิน, การลงทุน, กฎหมายเบื้องต้น, การพัฒนาตนเอง
+5. กีฬา, ความบันเทิง, วิทยาศาสตร์, อวกาศ ธรรมชาติ
+6. เทคโนโลยี, นวัตกรรม, AI และการเขียนโปรแกรม
+
+คำแนะนำหลักในการตอบ:
+- ตอบด้วยข้อมูลที่เป็นข้อเท็จจริง มีความถูกต้องและแม่นยำสูง
+- เมื่อเปิดใช้ Google Search หรือค้นหาข้อมูลจากอินเตอร์เน็ต ให้อ้างอิงแหล่งที่มา (Citations / Web Sources) พร้อมชื่อเว็บไซต์และ URL เสมอ
+- ตอบอย่างเป็นธรรมชาติ สุภาพ ละเอียด ชัดเจน ไม่มีข้อจำกัดด้านความยาวคำตอบ
+- เมื่อผู้ใช้ส่งรูปภาพมา ให้วิเคราะห์รูปอย่างถี่ถ้วนและตอบคำถามที่เกี่ยวข้องอย่างครอบคลุม`;
 
   const formattedHistory = history
     .filter(m => m.sender !== 'system' && !m.isError)
@@ -69,7 +80,7 @@ export async function sendChatMessage(history, newMessage, modelId, useWebSearch
       config: {
         systemInstruction,
         tools,
-        temperature: 0.8,
+        temperature: 0.7,
         maxOutputTokens: 65536,
       },
       history: formattedHistory,
@@ -101,9 +112,17 @@ export async function sendChatMessage(history, newMessage, modelId, useWebSearch
         fullText += chunkText;
         if (onStream) onStream(chunkText, fullText);
       }
-      if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks?.length > 0) {
-        groundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
-        usedSearch = true;
+      
+      const candidate = chunk.candidates?.[0];
+      if (candidate?.groundingMetadata) {
+        const metadata = candidate.groundingMetadata;
+        if (metadata.groundingChunks && metadata.groundingChunks.length > 0) {
+          groundingChunks = metadata.groundingChunks;
+          usedSearch = true;
+        }
+        if (metadata.webSearchQueries && metadata.webSearchQueries.length > 0) {
+          usedSearch = true;
+        }
       }
     }
 
