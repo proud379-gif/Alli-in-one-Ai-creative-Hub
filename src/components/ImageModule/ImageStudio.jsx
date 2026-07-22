@@ -154,7 +154,9 @@ export default function ImageStudio() {
         blur: result.blur !== undefined ? result.blur : prev.blur,
         opacity: prev.opacity,
       }));
-      if (result.faceScale !== undefined) {
+      if (result.scaleFactor !== undefined) {
+        setFaceScale(result.scaleFactor);
+      } else if (result.faceScale !== undefined) {
         setFaceScale(result.faceScale);
       }
       setAiMessage(`✅ ${result.explanation || 'ปรับแต่งรูปภาพเรียบร้อยแล้ว'}`);
@@ -180,16 +182,18 @@ export default function ImageStudio() {
   ];
 
   const AI_QUICK_COMMANDS = [
-    'ทำหน้าเล็กลง',
-    'ทำหน้าใหญ่ขึ้น',
-    'ปรับแสงสว่างขึ้น',
-    'ทำให้มืดลง',
-    'เพิ่มสีสันสดใส',
-    'ลดสี (ขาวดำ)',
-    'เพิ่มความคมชัด',
-    'เบลอพื้นหลัง',
-    'โทนสีอบอุ่น',
-    'โทนสีเย็น (Cyberpunk)',
+    '🏞️ ภาพวิวสดใสธรรมชาติ',
+    '🍔 สีอาหารดูน่าทาน',
+    '🛍️ สินค้าโดดเด่นคมชัด',
+    '🐱 สัตว์เลี้ยงขนนุ่มนวล',
+    '🌇 แสงอาทิตย์ตกอบอุ่น',
+    '❄️ โทนสีเย็น Cyberpunk',
+    '🎞️ โทนภาพยนตร์ Cinematic',
+    '🔍 ขยายสเกลวัตถุ/รูปภาพ',
+    '🖼️ ย่อสเกลวัตถุ/รูปภาพ',
+    '⬛ ภาพขาวดำคลาสสิก',
+    '🌸 เบลอฉากหลังนุ่มนวล',
+    '✨ เพิ่มความสว่างสดใส',
   ];
 
   return (
@@ -284,11 +288,11 @@ export default function ImageStudio() {
                 ลากรูปมาวางหรือคลิกเพื่ออัปโหลด
               </h3>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: 0 }}>
-                รองรับ JPG, PNG, WEBP, GIF · ขนาดไม่จำกัด
+                รองรับรูปภาพทุกประเภท: วิว, อาหาร, สินค้า, สัตว์เลี้ยง, อาร์ต, บุคคล (JPG, PNG, WEBP, GIF)
               </p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '16px' }}>
-                <span className="badge-pink">แต่งรูปเอง</span>
-                <span className="badge-neon">สั่ง AI ได้</span>
+                <span className="badge-pink">แต่งรูปได้ทุกประเภท</span>
+                <span className="badge-neon">สั่ง AI ภาษาไทย</span>
                 <span className="badge-cyan">ดาวน์โหลด HD</span>
               </div>
             </div>
@@ -344,7 +348,7 @@ export default function ImageStudio() {
         }}>
           {/* Tab Switch */}
           <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-            {[{ id: 'adjust', label: '🎨 ปรับแต่งเอง' }, { id: 'ai', label: '🤖 สั่ง AI' }].map(tab => (
+            {[{ id: 'adjust', label: '🎨 ปรับแต่งเอง' }, { id: 'ai', label: '🤖 สั่ง AI แต่งรูป' }].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -373,7 +377,7 @@ export default function ImageStudio() {
               {/* Filter Sliders */}
               <div>
                 <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
-                  ปรับสี & แสง
+                  ปรับสี & แสง (Color & Light)
                 </h4>
                 {sliders.map(s => {
                   const IconComp = s.icon;
@@ -409,7 +413,7 @@ export default function ImageStudio() {
               {/* Transform Controls */}
               <div>
                 <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
-                  หมุน & พลิก
+                  หมุน & พลิกรูปภาพ
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
                   <button onClick={() => setRotation(r => r - 90)} className="btn-secondary" style={{ fontSize: '0.8rem', justifyContent: 'center' }}>
@@ -435,14 +439,14 @@ export default function ImageStudio() {
                 </div>
               </div>
 
-              {/* Face Scale Slider */}
+              {/* Scale Slider */}
               <div>
                 <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
-                  ขนาดภาพ (Scale / Face Size)
+                  สเกลภาพ & วัตถุ (Object & Image Scale)
                 </h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {faceScale < 1 ? '😊 ลดขนาด (เล็กลง)' : faceScale > 1 ? '😊 ขยายขนาด (ใหญ่ขึ้น)' : 'ปกติ (1.0x)'}
+                    {faceScale < 1 ? '🔍 ย่อสเกลเล็กลง' : faceScale > 1 ? '🔍 ขยายสเกลใหญ่ขึ้น' : 'สเกลปกติ (1.0x)'}
                   </span>
                   <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ec4899' }}>{faceScale.toFixed(2)}x</span>
                 </div>
@@ -456,25 +460,27 @@ export default function ImageStudio() {
                   style={{ width: '100%', accentColor: '#ec4899', cursor: 'pointer', height: '4px' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                  <button onClick={() => setFaceScale(0.7)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>หน้าเล็ก</button>
-                  <button onClick={() => setFaceScale(1.0)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>ปกติ</button>
-                  <button onClick={() => setFaceScale(1.4)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>หน้าใหญ่</button>
+                  <button onClick={() => setFaceScale(0.7)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>ย่อเล็ก (0.7x)</button>
+                  <button onClick={() => setFaceScale(1.0)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>ปกติ (1.0x)</button>
+                  <button onClick={() => setFaceScale(1.4)} className="btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 10px' }}>ขยายใหญ่ (1.4x)</button>
                 </div>
               </div>
 
               {/* Quick Preset Filters */}
               <div>
                 <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px 0' }}>
-                  ฟิลเตอร์ Preset
+                  ฟิลเตอร์สำเร็จรูปทุกประเภทภาพ
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   {[
-                    { name: '🌇 Warm', f: { brightness: 10, contrast: 10, saturation: 20, hue: 15, blur: 0, opacity: 100 } },
-                    { name: '❄️ Cool Cyber', f: { brightness: 5, contrast: 15, saturation: 10, hue: -30, blur: 0, opacity: 100 } },
-                    { name: '🎞️ Cinematic', f: { brightness: -10, contrast: 30, saturation: -15, hue: 0, blur: 0, opacity: 100 } },
-                    { name: '🎨 Vivid Pop', f: { brightness: 15, contrast: 20, saturation: 60, hue: 0, blur: 0, opacity: 100 } },
-                    { name: '⬛ Mono B&W', f: { brightness: 0, contrast: 20, saturation: -100, hue: 0, blur: 0, opacity: 100 } },
-                    { name: '🌸 Soft Blur', f: { brightness: 5, contrast: -5, saturation: 10, hue: 0, blur: 3, opacity: 100 } },
+                    { name: '🏞️ วิวธรรมชาติสดใส', f: { brightness: 12, contrast: 15, saturation: 40, hue: -10, blur: 0, opacity: 100 } },
+                    { name: '🍔 อาหารดูน่าทาน', f: { brightness: 10, contrast: 12, saturation: 45, hue: 10, blur: 0, opacity: 100 } },
+                    { name: '🛍️ สินค้าโดดเด่น', f: { brightness: 15, contrast: 25, saturation: 20, hue: 0, blur: 0, opacity: 100 } },
+                    { name: '🌇 Sunset อบอุ่น', f: { brightness: 10, contrast: 10, saturation: 35, hue: 20, blur: 0, opacity: 100 } },
+                    { name: '❄️ Cool Cyberpunk', f: { brightness: 5, contrast: 20, saturation: 25, hue: -35, blur: 0, opacity: 100 } },
+                    { name: '🎞️ Cinematic Movie', f: { brightness: -10, contrast: 30, saturation: -15, hue: 0, blur: 0, opacity: 100 } },
+                    { name: '🎨 Vivid Pop Color', f: { brightness: 15, contrast: 20, saturation: 60, hue: 0, blur: 0, opacity: 100 } },
+                    { name: '⬛ Mono B&W', f: { brightness: 5, contrast: 25, saturation: -100, hue: 0, blur: 0, opacity: 100 } },
                   ].map((preset, i) => (
                     <button
                       key={i}
@@ -513,13 +519,13 @@ export default function ImageStudio() {
                 color: '#c4b5fd',
                 lineHeight: '1.6'
               }}>
-                🤖 พิมพ์คำสั่งภาษาไทยหรือภาษาอังกฤษ แล้ว AI จะปรับแต่งรูปให้อัตโนมัติครับ<br />
-                เช่น <em>"ทำหน้าเล็กลง"</em>, <em>"เพิ่มความสว่าง"</em>, <em>"โทนสีเย็น"</em>
+                🤖 พิมพ์คำสั่งแต่งรูปภาพได้ทุกประเภท (วิว, อาหาร, สินค้า, สัตว์เลี้ยง, วัตถุ, อาร์ต, บุคคล)<br />
+                เช่น <em>"เน้นสีอาหารให้ดูน่าทาน"</em>, <em>"ปรับภาพวิวให้สดใส"</em>, <em>"โทนสีเย็น"</em>
               </div>
 
               {/* Quick Command Chips */}
               <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', marginBottom: '8px' }}>คำสั่งด่วน:</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', marginBottom: '8px' }}>คำสั่งด่วนทุกหมวดหมู่:</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {AI_QUICK_COMMANDS.map((cmd, i) => (
                     <button
@@ -551,7 +557,7 @@ export default function ImageStudio() {
                   value={aiCommand}
                   onChange={e => setAiCommand(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAiCommand(); } }}
-                  placeholder="เช่น: ทำให้หน้าดูเล็กลง 20% เพิ่มความสว่างและลดสีแดง..."
+                  placeholder="เช่น: เน้นสีอาหารให้ดูน่าทาน, ปรับภาพวิวให้สดใสเหมือนรับแดด, ขยายสเกลภาพ 30%..."
                   style={{ width: '100%', fontSize: '0.88rem', resize: 'none' }}
                 />
                 <button
@@ -598,7 +604,7 @@ export default function ImageStudio() {
                     </div>
                   ))}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                    <span style={{ color: 'var(--text-subtle)' }}>faceScale</span>
+                    <span style={{ color: 'var(--text-subtle)' }}>scale</span>
                     <span style={{ color: faceScale !== 1 ? '#ec4899' : 'var(--text-subtle)', fontWeight: 600 }}>{faceScale.toFixed(2)}x</span>
                   </div>
                 </div>

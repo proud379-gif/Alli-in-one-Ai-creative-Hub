@@ -135,16 +135,16 @@ export async function sendChatMessage(history, newMessage, modelId, useWebSearch
 }
 
 /**
- * ส่งคำสั่ง AI สำหรับแต่งรูปภาพ
+ * ส่งคำสั่ง AI สำหรับแต่งรูปภาพทุกประเภท (วิว, อาหาร, สินค้า, สัตว์เลี้ยง, วัตถุ, อาร์ต, บุคคล)
  * แปลงคำสั่งภาษาไทย/อังกฤษ → JSON ค่าปรับแต่ง filter
  */
 export async function sendImageEditCommand(command, imageBase64, imageMimeType) {
   if (!genaiClient) throw new Error('GEMINI_NOT_INITIALIZED');
 
-  const prompt = `คุณเป็น AI ผู้เชี่ยวชาญด้านการแต่งรูปภาพ
+  const prompt = `คุณเป็น AI ผู้เชี่ยวชาญด้านการแต่งรูปภาพทุกประเภท (ภาพวิวธรรมชาติ, ภาพอาหาร, ภาพสินค้า, ภาพสัตว์เลี้ยง, ภาพวัตถุ, ภาพการ์ตูน, ภาพสตรีท และภาพบุคคล)
 ผู้ใช้ส่งรูปภาพและคำสั่ง: "${command}"
 
-วิเคราะห์คำสั่งและตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่น ในรูปแบบ:
+วิเคราะห์รูปภาพและคำสั่งของผู้ใช้ จากนั้นตอบกลับเป็น JSON เท่านั้น ในรูปแบบ:
 {
   "brightness": 0,
   "contrast": 0,
@@ -152,28 +152,30 @@ export async function sendImageEditCommand(command, imageBase64, imageMimeType) 
   "hue": 0,
   "blur": 0,
   "sharpness": 0,
-  "faceScale": 1.0,
-  "explanation": "คำอธิบายภาษาไทย"
+  "scaleFactor": 1.0,
+  "explanation": "คำอธิบายภาษาไทยในการปรับแต่ง"
 }
 
 ค่าแต่ละตัวมีช่วง:
 - brightness: -100 ถึง 100 (0 = ไม่เปลี่ยน, บวก = สว่างขึ้น, ลบ = มืดลง)
-- contrast: -100 ถึง 100
-- saturation: -100 ถึง 100 (ลบ = ลดสี, บวก = เพิ่มสี)
-- hue: -180 ถึง 180 (หมุนสี)
-- blur: 0 ถึง 20 (0 = ไม่เบลอ)
-- sharpness: 0 ถึง 100
-- faceScale: 0.5 ถึง 2.0 (1.0 = ไม่เปลี่ยน, น้อยกว่า 1 = หน้าเล็กลง, มากกว่า 1 = หน้าใหญ่ขึ้น)
+- contrast: -100 ถึง 100 (บวก = คมชัดสดใสขึ้น, ลบ = นุ่มนวลลง)
+- saturation: -100 ถึง 100 (ลบ = ลดสี/ขาวดำ, บวก = เพิ่มสีสันให้จัดจ้าน)
+- hue: -180 ถึง 180 (หมุนปรับโทนสี)
+- blur: 0 ถึง 20 (เบลอภาพ/พื้นหลัง)
+- sharpness: 0 ถึง 100 (เพิ่มรายละเอียดความคมชัด)
+- scaleFactor: 0.5 ถึง 2.5 (1.0 = ปกติ, น้อยกว่า 1 = ย่อขนาดภาพ/วัตถุเล็กลง, มากกว่า 1 = ขยายภาพ/วัตถุใหญ่ขึ้น)
 
-ตัวอย่างการแปลคำสั่ง:
-- "ทำหน้าเล็กลง" → faceScale: 0.75
-- "ทำหน้าใหญ่ขึ้น" → faceScale: 1.3
+ตัวอย่างคำสั่งและการปรับค่าตามประเภทรูปภาพ:
+- "เน้นสีอาหารให้ดูน่าทาน" → saturation: 45, brightness: 12, contrast: 15
+- "ปรับภาพวิวธรรมชาติให้สดใส" → saturation: 50, hue: -10, brightness: 10
+- "ปรับสินค้าให้โดดเด่นคมชัด" → contrast: 30, sharpness: 45, brightness: 15
+- "ดึงรายละเอียดขนสัตว์เลี้ยง" → contrast: 25, sharpness: 40, saturation: 20
+- "ย่อขนาดภาพ/วัตถุเล็กลง" → scaleFactor: 0.75
+- "ขยายขนาดภาพ/วัตถุใหญ่ขึ้น" → scaleFactor: 1.35
+- "ทำภาพเป็นโทนสีเย็น Cyberpunk" → hue: -40, saturation: 35, contrast: 20
 - "ปรับแสงสว่างขึ้น" → brightness: 30
 - "ทำให้มืดลง" → brightness: -30
-- "เพิ่มความคมชัด" → contrast: 25, sharpness: 40
-- "ลดสี / ขาวดำ" → saturation: -100
-- "เพิ่มสีสันสดใส" → saturation: 50, brightness: 10
-- "เบลอ background" → blur: 8`;
+- "ลดสี / ขาวดำ" → saturation: -100`;
 
   try {
     const parts = [];
@@ -193,7 +195,7 @@ export async function sendImageEditCommand(command, imageBase64, imageMimeType) 
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
-    return { explanation: 'ไม่สามารถแปลคำสั่งได้' };
+    return { explanation: 'ไม่สามารถแปลคำสั่งแต่งรูปได้' };
   } catch (err) {
     console.error('Image AI Command Error:', err);
     throw err;
