@@ -1,23 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { VIDEO_PRESETS } from '../../mock/aiData';
 import {
   Play, Pause, Scissors, Sparkles, Wand2, Volume2, Film, Layers, Download, Check,
-  RefreshCw, Type, Eye, Globe, Clock, Infinity as InfinityIcon, Subtitles, EyeOff
+  RefreshCw, Type, Eye, Globe, Clock, Infinity as InfinityIcon, EyeOff, Upload, Trash2, Video as VideoIcon,
+  RotateCw, Gauge, Sliders, Zap
 } from 'lucide-react';
 
 export default function VideoEditor() {
   const [selectedPreset, setSelectedPreset] = useState(VIDEO_PRESETS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('cyberpunk');
+  const [activeFilter, setActiveFilter] = useState('normal');
   const [subtitleStyle, setSubtitleStyle] = useState('neon');
   const [targetLanguage, setTargetLanguage] = useState('th');
   const [durationOption, setDurationOption] = useState('unlimited');
-  const [customMinutes, setCustomMinutes] = useState('10');
   const [voiceGender, setVoiceGender] = useState('th-male');
   const [scriptInput, setScriptInput] = useState('');
   const [isProcessingAi, setIsProcessingAi] = useState(false);
   const [rendered, setRendered] = useState(false);
-  const [showSubtitle, setShowSubtitle] = useState(true); // ซับไทยเปิดอยู่โดย default
+  const [showSubtitle, setShowSubtitle] = useState(true);
+  const [uploadedVideo, setUploadedVideo] = useState(null); // { url, name, size, type }
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Video manipulation states
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(60);
+  const [videoSpeed, setVideoSpeed] = useState(1.0);
+  const [videoRotate, setVideoRotate] = useState(0);
+  const [trimNotice, setTrimNotice] = useState('');
+
+  const videoRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setUploadedVideo({ url, name: file.name, size: (file.size / 1024 / 1024).toFixed(1), type: file.type });
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('video/')) return;
+    const url = URL.createObjectURL(file);
+    setUploadedVideo({ url, name: file.name, size: (file.size / 1024 / 1024).toFixed(1), type: file.type });
+  };
+
+  const handleRemoveVideo = () => {
+    if (uploadedVideo?.url) URL.revokeObjectURL(uploadedVideo.url);
+    setUploadedVideo(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Video Trimming & Speed controls
+  const handleApplyTrim = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = trimStart;
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+    setTrimNotice(`✂️ ตัดคลิปช่วง ${trimStart}s - ${trimEnd}s แล้ว!`);
+    setTimeout(() => setTrimNotice(''), 3000);
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current && trimEnd > 0) {
+      if (videoRef.current.currentTime >= trimEnd) {
+        videoRef.current.currentTime = trimStart;
+      }
+    }
+  };
+
+  const handleSpeedChange = (spd) => {
+    setVideoSpeed(spd);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = spd;
+    }
+  };
+
+  const handleRotate = () => {
+    setVideoRotate(r => (r + 90) % 360);
+  };
 
   const LANGUAGES = [
     { code: 'th', name: '🇹🇭 ภาษาไทย (Thai)', defaultSub: 'สวัสดีครับ ยินดีต้อนรับสู่ระบบตัดต่อวิดีโอไม่จำกัดความยาว' },
@@ -60,32 +124,29 @@ export default function VideoEditor() {
       { id: 'ko-female', label: '🇰🇷 Korean Female (K-Drama Soft)' },
       { id: 'ko-male', label: '🇰🇷 Korean Male (K-Drama Host)' }
     ],
-    es: [
-      { id: 'es-voice', label: '🇪🇸 Español Voice (Natural Speaker)' }
-    ],
-    fr: [
-      { id: 'fr-voice', label: '🇫🇷 Français Voice (Parisian Accent)' }
-    ],
-    de: [
-      { id: 'de-voice', label: '🇩🇪 Deutsch Voice (Berlin Clear)' }
-    ]
+    es: [{ id: 'es-voice', label: '🇪🇸 Español Voice (Natural Speaker)' }],
+    fr: [{ id: 'fr-voice', label: '🇫🇷 Français Voice (Parisian Accent)' }],
+    de: [{ id: 'de-voice', label: '🇩🇪 Deutsch Voice (Berlin Clear)' }]
   };
 
-  const filters = [
-    { id: 'cyberpunk', name: 'Cyberpunk Glow', glow: '0 0 30px rgba(6, 182, 212, 0.4)' },
-    { id: 'anime', name: 'Anime 4K Style', glow: '0 0 30px rgba(236, 72, 153, 0.4)' },
-    { id: 'cinematic', name: 'Cinematic 8K', glow: '0 0 30px rgba(99, 102, 241, 0.4)' },
-    { id: 'retro', name: 'Retro Synthwave', glow: '0 0 30px rgba(245, 158, 11, 0.4)' }
+  const FILTERS = [
+    { id: 'normal', name: 'Original (ปกติ)', filterStyle: 'none', glow: '0 0 15px rgba(0,0,0,0.4)' },
+    { id: 'cyberpunk', name: 'Cyberpunk Glow ⚡', filterStyle: 'contrast(130%) saturate(180%) hue-rotate(190deg)', glow: '0 0 30px rgba(6, 182, 212, 0.6)' },
+    { id: 'anime', name: 'Anime 4K 🎨', filterStyle: 'saturate(200%) contrast(115%) brightness(105%)', glow: '0 0 30px rgba(236, 72, 153, 0.6)' },
+    { id: 'cinematic', name: 'Cinematic 8K 🎬', filterStyle: 'contrast(135%) sepia(25%) saturate(125%)', glow: '0 0 30px rgba(99, 102, 241, 0.6)' },
+    { id: 'retro', name: 'Synthwave 🌆', filterStyle: 'hue-rotate(290deg) saturate(220%) contrast(125%)', glow: '0 0 30px rgba(245, 158, 11, 0.6)' },
+    { id: 'noir', name: 'B&W Noir 🏴', filterStyle: 'grayscale(100%) contrast(150%)', glow: '0 0 30px rgba(255, 255, 255, 0.3)' },
+    { id: 'vintage', name: 'Vintage Warm 🎞️', filterStyle: 'sepia(55%) contrast(110%) brightness(105%)', glow: '0 0 30px rgba(217, 119, 6, 0.5)' }
   ];
 
   const currentLangObj = LANGUAGES.find(l => l.code === targetLanguage) || LANGUAGES[0];
   const currentDurationObj = DURATIONS.find(d => d.id === durationOption) || DURATIONS[0];
   const availableVoiceovers = VOICEOVERS[targetLanguage] || VOICEOVERS['en'];
+  const currentFilterObj = FILTERS.find(f => f.id === activeFilter) || FILTERS[0];
 
   const handleGenerateScriptVideo = () => {
     if (!scriptInput.trim()) return;
     setIsProcessingAi(true);
-
     setTimeout(() => {
       setSelectedPreset({
         id: 'custom-' + Date.now(),
@@ -95,7 +156,7 @@ export default function VideoEditor() {
         previewColor: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
         subtitles: [
           { time: '00:01 - 00:05', text: scriptInput },
-          { time: '00:05 - ∞', text: `[${currentLangObj.name.split(' ')[0]}] AI ถอดซับไตเติ้ลภาษาและปรับความยาว ${currentDurationObj.display} เรียบร้อยแล้ว` }
+          { time: '00:05 - ∞', text: `[${currentLangObj.name.split(' ')[0]}] AI ถอดซับไตเติ้ลภาษาและปรับความยาวเรียบร้อยแล้ว` }
         ]
       });
       setIsProcessingAi(false);
@@ -115,15 +176,19 @@ export default function VideoEditor() {
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Film size={24} color="#06b6d4" />
             AllInStudio Video Studio
-            <span className="badge-pink" style={{ fontSize: '0.75rem' }}>♾️ ไม่จำกัดความยาว (Unlimited Duration)</span>
+            <span className="badge-pink" style={{ fontSize: '0.75rem' }}>♾️ ไม่จำกัดความยาว</span>
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-            ตัดต่อคลิปสั้น วิดีโอยาว และภาพยนตร์ได้แบบไม่จำกัดความยาว พร้อมระบบสลับภาษา & ถอดซับอัตโนมัติ 8+ ภาษา
+            อัปโหลดคลิปจริง · ตัดต่อปรับความยาว · ใส่ฟิลเตอร์ FX · ซับไทยถอดอัตโนมัติ 8+ ภาษา
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Language Selector Dropdown */}
+          <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+            <Upload size={16} /> อัปโหลดคลิปวิดีโอ
+          </button>
+          <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} style={{ display: 'none' }} />
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)' }}>
             <Globe size={16} color="#06b6d4" />
             <select
@@ -136,18 +201,12 @@ export default function VideoEditor() {
               style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
             >
               {LANGUAGES.map(l => (
-                <option key={l.code} value={l.code} style={{ background: '#0f172a', color: '#fff' }}>
-                  {l.name}
-                </option>
+                <option key={l.code} value={l.code} style={{ background: '#0f172a', color: '#fff' }}>{l.name}</option>
               ))}
             </select>
           </div>
 
-          <button
-            onClick={handleRender}
-            className="btn-cyan"
-            style={{ padding: '10px 20px' }}
-          >
+          <button onClick={handleRender} className="btn-cyan" style={{ padding: '10px 20px' }}>
             {rendered ? <Check size={18} /> : <Download size={18} />}
             <span>{rendered ? 'เรนเดอร์สำเร็จ (4K Ready)' : 'ส่งออกวิดีโอ 4K'}</span>
           </button>
@@ -156,164 +215,212 @@ export default function VideoEditor() {
 
       {/* Main Workspace Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        {/* Left Side: Video Preview Canvas */}
+        {/* Left Side: Video Preview Canvas + Editing Bar */}
         <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Video Player Display Box */}
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            height: '360px',
-            borderRadius: '16px',
-            background: selectedPreset.previewColor,
-            boxShadow: filters.find(f => f.id === activeFilter)?.glow || '0 0 25px rgba(0,0,0,0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '20px',
-            overflow: 'hidden',
-            transition: 'all 0.4s'
-          }}>
-            {/* Top Overlay Badges */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-              <span className="badge-cyan" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                4K HDR • 60FPS
-              </span>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <span className="badge-neon" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                  🌐 {currentLangObj.name.split(' ')[0]}
-                </span>
-                <span className="badge-pink" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                  ⏱️ {currentDurationObj.display}
-                </span>
+
+          {/* ===== UPLOAD ZONE OR REAL VIDEO PLAYER ===== */}
+          {!uploadedVideo ? (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: '100%', height: '280px', borderRadius: '16px',
+                border: `2px dashed ${isDragging ? '#06b6d4' : 'rgba(6,182,212,0.35)'}`,
+                background: isDragging ? 'rgba(6,182,212,0.08)' : 'rgba(6,182,212,0.03)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '12px', cursor: 'pointer', transition: 'all 0.25s',
+              }}
+            >
+              <div style={{ width: '72px', height: '72px', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(139,92,246,0.2))', border: '1px solid rgba(6,182,212,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Upload size={34} color="#06b6d4" />
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', margin: '0 0 4px 0' }}>ลากคลิปมาวาง หรือคลิกเพื่ออัปโหลดวิดีโอ</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>รองรับ MP4, MOV, AVI, WEBM · ทุกความยาว ไม่จำกัด</p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span className="badge-cyan">4K / HDR</span>
+                <span className="badge-pink">♾️ ไม่จำกัดความยาว</span>
+                <span className="badge-neon">ซับ {currentLangObj.name.split(' ')[0]}</span>
               </div>
             </div>
-
-            {/* Simulated Animated Video Content Graphic */}
-            <div style={{ textAlign: 'center', zIndex: 5, padding: '20px 0' }}>
-              <div className={isPlaying ? "animate-spin-slow" : ""} style={{
-                width: '80px',
-                height: '80px',
-                margin: '0 auto 14px auto',
-                borderRadius: '24px',
-                background: 'rgba(255, 255, 255, 0.15)',
-                backdropFilter: 'blur(12px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
-              }}>
-                <Sparkles size={40} color="#fff" />
-              </div>
-              <h3 style={{ fontSize: '1.2rem', color: '#fff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                {selectedPreset.title}
-              </h3>
-            </div>
-
-            {/* Live Subtitle Overlay Ticker — toggle on/off */}
-            {showSubtitle && (
-              <div style={{
-                background: subtitleStyle === 'neon'
-                  ? 'rgba(6, 182, 212, 0.85)'
-                  : subtitleStyle === 'anime'
-                  ? 'rgba(236, 72, 153, 0.85)'
-                  : 'rgba(15, 23, 42, 0.9)',
-                color: '#fff',
-                padding: '10px 16px',
-                borderRadius: '12px',
-                textAlign: 'center',
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                zIndex: 10,
-                backdropFilter: 'blur(8px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <span>🗣️</span>
-                <span>[{currentLangObj.name.split(' ')[0]}]</span>
-                <span>{selectedPreset.subtitles?.[0]?.text || currentLangObj.defaultSub}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Player Controls Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(15, 23, 42, 0.6)', padding: '10px 16px', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="btn-primary"
-                style={{ borderRadius: '50%', width: '42px', height: '42px', padding: 0, justifyContent: 'center' }}
-              >
-                {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
-              </button>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                {isPlaying ? '00:12' : '00:00'} / {currentDurationObj.display}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Subtitle ON/OFF Toggle Button */}
-              <button
-                onClick={() => setShowSubtitle(s => !s)}
+          ) : (
+            <div style={{ position: 'relative', width: '100%', borderRadius: '16px', overflow: 'hidden', background: '#000', boxShadow: currentFilterObj.glow }}>
+              <video
+                ref={videoRef}
+                src={uploadedVideo.url}
+                controls
+                onTimeUpdate={handleTimeUpdate}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '5px 12px',
-                  borderRadius: '999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: '1px solid',
-                  fontFamily: 'var(--font-sans)',
-                  transition: 'all 0.2s',
-                  background: showSubtitle ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
-                  borderColor: showSubtitle ? '#10b981' : '#ef4444',
-                  color: showSubtitle ? '#34d399' : '#f87171',
+                  width: '100%', maxHeight: '340px', display: 'block', borderRadius: '16px',
+                  filter: currentFilterObj.filterStyle,
+                  transform: `rotate(${videoRotate}deg)`,
+                  transition: 'all 0.3s ease'
                 }}
-                title={showSubtitle ? 'ปิดซับไตเติ้ล' : 'เปิดซับไตเติ้ล'}
-              >
-                {showSubtitle
-                  ? <><Eye size={13} /> ซับ {currentLangObj.name.split(' ')[0]} ON</>
-                  : <><EyeOff size={13} /> ซับ OFF</>
-                }
-              </button>
-              <span className="badge-pink">♾️ {currentDurationObj.display}</span>
+              />
+              {showSubtitle && (
+                <div style={{
+                  position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+                  background: subtitleStyle === 'neon' ? 'rgba(6,182,212,0.88)' : subtitleStyle === 'anime' ? 'rgba(236,72,153,0.88)' : 'rgba(15,23,42,0.92)',
+                  color: '#fff', padding: '8px 18px', borderRadius: '10px',
+                  fontSize: '0.9rem', fontWeight: 700, maxWidth: '90%', textAlign: 'center',
+                  backdropFilter: 'blur(8px)', boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                  whiteSpace: 'pre-wrap', pointerEvents: 'none'
+                }}>
+                  🗣️ [{currentLangObj.name.split(' ')[0]}] {currentLangObj.defaultSub}
+                </div>
+              )}
+              <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px', backdropFilter: 'blur(6px)' }}>
+                  {uploadedVideo.name} ({uploadedVideo.size} MB)
+                </span>
+                <button onClick={handleRemoveVideo} style={{ background: 'rgba(239,68,68,0.85)', border: 'none', color: '#fff', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600 }}>
+                  <Trash2 size={13} /> ลบ
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== MANUAL TRIM & CUTTING CONTROLS ===== */}
+          <div style={{ background: 'rgba(15, 23, 42, 0.7)', borderRadius: '14px', padding: '16px', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Scissors size={16} color="#ec4899" />
+                ตัดต่อคลิปด้วยตัวเอง (Manual Video Trimming)
+              </div>
+              {trimNotice && <span style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 600 }}>{trimNotice}</span>}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '10px', alignItems: 'center' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', display: 'block', marginBottom: '4px' }}>⏱️ วินาทีเริ่มต้น (Start Sec):</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={trimStart}
+                  onChange={(e) => setTrimStart(Math.max(0, Number(e.target.value)))}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', display: 'block', marginBottom: '4px' }}>⏱️ วินาทีสิ้นสุด (End Sec):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={trimEnd}
+                  onChange={(e) => setTrimEnd(Math.max(1, Number(e.target.value)))}
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div style={{ paddingTop: '18px' }}>
+                <button onClick={handleApplyTrim} className="btn-primary" style={{ padding: '8px 14px', fontSize: '0.82rem' }}>
+                  <Scissors size={14} /> ตัดช่วงคลิป
+                </button>
+              </div>
+
+              <div style={{ paddingTop: '18px' }}>
+                <button onClick={handleRotate} className="btn-secondary" style={{ padding: '8px 12px', fontSize: '0.82rem' }} title="หมุนคลิป">
+                  <RotateCw size={14} /> {videoRotate}°
+                </button>
+              </div>
+            </div>
+
+            {/* Video Speed Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Gauge size={14} color="#06b6d4" /> ความเร็วคลิป:
+              </span>
+              {[0.5, 1.0, 1.25, 1.5, 2.0].map(spd => (
+                <button
+                  key={spd}
+                  onClick={() => handleSpeedChange(spd)}
+                  style={{
+                    padding: '3px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                    border: videoSpeed === spd ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)',
+                    background: videoSpeed === spd ? 'rgba(6,182,212,0.2)' : 'rgba(255,255,255,0.03)',
+                    color: videoSpeed === spd ? '#22d3ee' : 'var(--text-muted)'
+                  }}
+                >
+                  {spd}x
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Video Timeline Track Visualizer */}
+          {/* Subtitle Toggle Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(15, 23, 42, 0.6)', padding: '10px 16px', borderRadius: '12px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              ภาษาปัจจุบัน: {currentLangObj.name}
+            </span>
+            <button
+              onClick={() => setShowSubtitle(s => !s)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px',
+                borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', border: '1px solid',
+                background: showSubtitle ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
+                borderColor: showSubtitle ? '#10b981' : '#ef4444',
+                color: showSubtitle ? '#34d399' : '#f87171'
+              }}
+            >
+              {showSubtitle ? <><Eye size={13} /> ซับ {currentLangObj.name.split(' ')[0]} ON</> : <><EyeOff size={13} /> ซับ OFF</>}
+            </button>
+          </div>
+
+          {/* Track Visualizer */}
           <div style={{ background: 'rgba(15, 23, 42, 0.8)', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-              <span><Layers size={14} inline /> Track Visualizer (ไม่จำกัดความยาว)</span>
-              <span>Timeline Length: 00:00 - {currentDurationObj.display}</span>
+              <span><Layers size={14} inline /> Track Visualizer</span>
+              <span>ตัดช่วง: {trimStart}s - {trimEnd}s ({currentDurationObj.display})</span>
             </div>
-
-            {/* Video Track Line */}
-            <div style={{ height: '24px', background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)', borderRadius: '6px', marginBottom: '6px', opacity: 0.8, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff', fontWeight: 600 }}>
-              📹 Video Track: {selectedPreset.title} [{currentDurationObj.display}]
+            <div style={{ height: '24px', background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)', borderRadius: '6px', marginBottom: '6px', opacity: 0.85, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff', fontWeight: 600 }}>
+              📹 Video Track ({uploadedVideo ? uploadedVideo.name : 'AI Preset Video'}) [{videoSpeed}x]
             </div>
-            {/* Subtitle Track Line */}
-            <div style={{ height: '20px', background: 'rgba(236, 72, 153, 0.4)', borderRadius: '6px', marginBottom: '6px', border: '1px border rgba(236, 72, 153, 0.6)', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff' }}>
+            <div style={{ height: '20px', background: 'rgba(236, 72, 153, 0.4)', borderRadius: '6px', marginBottom: '6px', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff' }}>
               💬 AI Subtitles ({currentLangObj.name.split(' ')[0]} - Auto Aligned)
             </div>
-            {/* Audio Track Line */}
             <div style={{ height: '20px', background: 'rgba(16, 185, 129, 0.3)', borderRadius: '6px', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff' }}>
               🔊 Voiceover ({availableVoiceovers.find(v => v.id === voiceGender)?.label || voiceGender})
             </div>
           </div>
         </div>
 
-        {/* Right Side: AI Tools & Controls Panel */}
+        {/* Right Side: AI Tools & Visual FX Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* AI Visual Filters Selection */}
+          <div className="glass-panel" style={{ padding: '18px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} color="#06b6d4" />
+              AI Visual Effects & Filters
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {FILTERS.map(filter => (
+                <button
+                  key={filter.id}
+                  onClick={() => setActiveFilter(filter.id)}
+                  style={{
+                    padding: '9px 8px', borderRadius: '10px',
+                    border: activeFilter === filter.id ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)',
+                    background: activeFilter === filter.id ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255,255,255,0.03)',
+                    color: activeFilter === filter.id ? '#22d3ee' : 'var(--text-muted)',
+                    fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left'
+                  }}
+                >
+                  {filter.name}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Duration Selector */}
           <div className="glass-panel" style={{ padding: '18px' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={16} color="#ec4899" />
-              กำหนดความยาวคลิป (Video Duration)
+              กำหนดความยาวคลิป (Duration)
             </h3>
             <select
               value={durationOption}
@@ -321,13 +428,11 @@ export default function VideoEditor() {
               style={{ width: '100%', fontSize: '0.85rem', marginBottom: '6px' }}
             >
               {DURATIONS.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.label}
-                </option>
+                <option key={d.id} value={d.id}>{d.label}</option>
               ))}
             </select>
             <div style={{ fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <InfinityIcon size={12} /> สามารถนำคลิปความยาวเท่าใดก็ได้มาเรนเดอร์ ไม่จำกัดความยาว
+              <InfinityIcon size={12} /> รองรับทุกความยาว ไม่จำกัด
             </div>
           </div>
 
@@ -347,17 +452,12 @@ export default function VideoEditor() {
                     if (firstVoice) setVoiceGender(firstVoice.id);
                   }}
                   style={{
-                    padding: '8px',
-                    borderRadius: '10px',
+                    padding: '8px', borderRadius: '10px',
                     border: targetLanguage === l.code ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)',
                     background: targetLanguage === l.code ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255,255,255,0.03)',
                     color: targetLanguage === l.code ? '#22d3ee' : 'var(--text-muted)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                   }}
                 >
                   {l.name.split(' ')[0]} {l.name.split(' ')[1]}
@@ -402,38 +502,9 @@ export default function VideoEditor() {
               style={{ width: '100%', fontSize: '0.85rem' }}
             >
               {availableVoiceovers.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.label}
-                </option>
+                <option key={v.id} value={v.id}>{v.label}</option>
               ))}
             </select>
-          </div>
-
-          {/* AI Visual Filters Selection */}
-          <div className="glass-panel" style={{ padding: '18px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff' }}>
-              🪄 AI Visual Filters
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              {filters.map(filter => (
-                <button
-                  key={filter.id}
-                  onClick={() => setActiveFilter(filter.id)}
-                  style={{
-                    padding: '8px',
-                    borderRadius: '10px',
-                    border: activeFilter === filter.id ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)',
-                    background: activeFilter === filter.id ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255,255,255,0.03)',
-                    color: activeFilter === filter.id ? '#06b6d4' : 'var(--text-muted)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {filter.name}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </div>
