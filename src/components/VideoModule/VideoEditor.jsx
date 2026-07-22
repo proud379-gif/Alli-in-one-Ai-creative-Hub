@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { VIDEO_PRESETS } from '../../mock/aiData';
 import {
   Play, Pause, Scissors, Sparkles, Wand2, Volume2, Film, Layers, Download, Check,
-  RefreshCw, Type, Eye, Globe, Clock, Infinity as InfinityIcon
+  RefreshCw, Type, Eye, Globe, Clock, Infinity as InfinityIcon, Subtitles, EyeOff
 } from 'lucide-react';
 
 export default function VideoEditor() {
@@ -17,6 +17,7 @@ export default function VideoEditor() {
   const [scriptInput, setScriptInput] = useState('');
   const [isProcessingAi, setIsProcessingAi] = useState(false);
   const [rendered, setRendered] = useState(false);
+  const [showSubtitle, setShowSubtitle] = useState(true); // ซับไทยเปิดอยู่โดย default
 
   const LANGUAGES = [
     { code: 'th', name: '🇹🇭 ภาษาไทย (Thai)', defaultSub: 'สวัสดีครับ ยินดีต้อนรับสู่ระบบตัดต่อวิดีโอไม่จำกัดความยาว' },
@@ -208,25 +209,33 @@ export default function VideoEditor() {
               </h3>
             </div>
 
-            {/* Live Subtitle Overlay Ticker */}
-            <div style={{
-              background: subtitleStyle === 'neon'
-                ? 'rgba(6, 182, 212, 0.85)'
-                : subtitleStyle === 'anime'
-                ? 'rgba(236, 72, 153, 0.85)'
-                : 'rgba(15, 23, 42, 0.9)',
-              color: '#fff',
-              padding: '10px 16px',
-              borderRadius: '12px',
-              textAlign: 'center',
-              fontSize: '0.95rem',
-              fontWeight: 700,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-              zIndex: 10,
-              backdropFilter: 'blur(8px)'
-            }}>
-              🗣️ [{currentLangObj.name.split(' ')[0]}] {currentLangObj.defaultSub}
-            </div>
+            {/* Live Subtitle Overlay Ticker — toggle on/off */}
+            {showSubtitle && (
+              <div style={{
+                background: subtitleStyle === 'neon'
+                  ? 'rgba(6, 182, 212, 0.85)'
+                  : subtitleStyle === 'anime'
+                  ? 'rgba(236, 72, 153, 0.85)'
+                  : 'rgba(15, 23, 42, 0.9)',
+                color: '#fff',
+                padding: '10px 16px',
+                borderRadius: '12px',
+                textAlign: 'center',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                zIndex: 10,
+                backdropFilter: 'blur(8px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                <span>🗣️</span>
+                <span>[{currentLangObj.name.split(' ')[0]}]</span>
+                <span>{selectedPreset.subtitles?.[0]?.text || currentLangObj.defaultSub}</span>
+              </div>
+            )}
           </div>
 
           {/* Player Controls Bar */}
@@ -245,8 +254,33 @@ export default function VideoEditor() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="badge-neon">Auto Subtitle ({currentLangObj.name.split(' ')[0]})</span>
-              <span className="badge-pink">Duration: Unlimited ∞</span>
+              {/* Subtitle ON/OFF Toggle Button */}
+              <button
+                onClick={() => setShowSubtitle(s => !s)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '5px 12px',
+                  borderRadius: '999px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'all 0.2s',
+                  background: showSubtitle ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
+                  borderColor: showSubtitle ? '#10b981' : '#ef4444',
+                  color: showSubtitle ? '#34d399' : '#f87171',
+                }}
+                title={showSubtitle ? 'ปิดซับไตเติ้ล' : 'เปิดซับไตเติ้ล'}
+              >
+                {showSubtitle
+                  ? <><Eye size={13} /> ซับ {currentLangObj.name.split(' ')[0]} ON</>
+                  : <><EyeOff size={13} /> ซับ OFF</>
+                }
+              </button>
+              <span className="badge-pink">♾️ {currentDurationObj.display}</span>
             </div>
           </div>
 
