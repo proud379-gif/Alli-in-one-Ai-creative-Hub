@@ -1,16 +1,74 @@
 import React, { useState } from 'react';
 import { VIDEO_PRESETS } from '../../mock/aiData';
-import { Play, Pause, Scissors, Sparkles, Wand2, Volume2, Film, Layers, Download, Check, RefreshCw, Type, Eye } from 'lucide-react';
+import {
+  Play, Pause, Scissors, Sparkles, Wand2, Volume2, Film, Layers, Download, Check,
+  RefreshCw, Type, Eye, Globe, Clock, Infinity as InfinityIcon
+} from 'lucide-react';
 
 export default function VideoEditor() {
   const [selectedPreset, setSelectedPreset] = useState(VIDEO_PRESETS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeFilter, setActiveFilter] = useState('cyberpunk');
   const [subtitleStyle, setSubtitleStyle] = useState('neon');
+  const [targetLanguage, setTargetLanguage] = useState('th');
+  const [durationOption, setDurationOption] = useState('unlimited');
+  const [customMinutes, setCustomMinutes] = useState('10');
   const [voiceGender, setVoiceGender] = useState('th-male');
   const [scriptInput, setScriptInput] = useState('');
   const [isProcessingAi, setIsProcessingAi] = useState(false);
   const [rendered, setRendered] = useState(false);
+
+  const LANGUAGES = [
+    { code: 'th', name: '🇹🇭 ภาษาไทย (Thai)', defaultSub: 'สวัสดีครับ ยินดีต้อนรับสู่ระบบตัดต่อวิดีโอไม่จำกัดความยาว' },
+    { code: 'en', name: '🇺🇸 English (US)', defaultSub: 'Hello everyone! Welcome to Unlimited Duration Video Studio' },
+    { code: 'ja', name: '🇯🇵 日本語 (Japanese)', defaultSub: 'みなさんこんにちは！無制限動画編集へようこそ' },
+    { code: 'zh', name: '🇨🇳 中文 (Chinese)', defaultSub: '大家好！欢迎使用无限制时长视频剪辑系统' },
+    { code: 'ko', name: '🇰🇷 한국어 (Korean)', defaultSub: '안녕하세요! 무제한 비디오 스튜디오에 오신 것을 환영합니다' },
+    { code: 'es', name: '🇪🇸 Español (Spanish)', defaultSub: '¡Hola a todos! Bienvenidos al editor de video sin límite' },
+    { code: 'fr', name: '🇫🇷 Français (French)', defaultSub: 'Bonjour à tous! Bienvenue dans le studio vidéo illimité' },
+    { code: 'de', name: '🇩🇪 Deutsch (German)', defaultSub: 'Hallo zusammen! Willkommen im unbegrenzten Videostudio' }
+  ];
+
+  const DURATIONS = [
+    { id: 'unlimited', label: '♾️ ไม่จำกัดความยาว (Unlimited)', display: 'Unlimited ∞' },
+    { id: '15s', label: '⚡ 15 วินาที (Shorts / Reels)', display: '00:15' },
+    { id: '60s', label: '📱 1 นาที (Short Video)', display: '01:00' },
+    { id: '5m', label: '🎥 5 นาที (Medium Video)', display: '05:00' },
+    { id: '30m', label: '🎬 30 นาที (Long Content)', display: '30:00' },
+    { id: '2h', label: '📽️ 2 ชั่วโมง (Full Movie)', display: '02:00:00' }
+  ];
+
+  const VOICEOVERS = {
+    th: [
+      { id: 'th-male', label: '🇹🇭 เสียงพากย์ ชายไทย (Smart Executive)' },
+      { id: 'th-female', label: '🇹🇭 เสียงพากย์ หญิงไทย (Smooth Professional)' }
+    ],
+    en: [
+      { id: 'en-male', label: '🇺🇸 English Male (Cyberpunk Narrative)' },
+      { id: 'en-female', label: '🇺🇸 English Female (Tech Reviewer)' }
+    ],
+    ja: [
+      { id: 'ja-female', label: '🇯🇵 Japanese Female (Anime Voice Actor)' },
+      { id: 'ja-male', label: '🇯🇵 Japanese Male (Anime Protagonist)' }
+    ],
+    zh: [
+      { id: 'zh-female', label: '🇨🇳 Chinese Female (Mandarin News)' },
+      { id: 'zh-male', label: '🇨🇳 Chinese Male (Documentary)' }
+    ],
+    ko: [
+      { id: 'ko-female', label: '🇰🇷 Korean Female (K-Drama Soft)' },
+      { id: 'ko-male', label: '🇰🇷 Korean Male (K-Drama Host)' }
+    ],
+    es: [
+      { id: 'es-voice', label: '🇪🇸 Español Voice (Natural Speaker)' }
+    ],
+    fr: [
+      { id: 'fr-voice', label: '🇫🇷 Français Voice (Parisian Accent)' }
+    ],
+    de: [
+      { id: 'de-voice', label: '🇩🇪 Deutsch Voice (Berlin Clear)' }
+    ]
+  };
 
   const filters = [
     { id: 'cyberpunk', name: 'Cyberpunk Glow', glow: '0 0 30px rgba(6, 182, 212, 0.4)' },
@@ -19,6 +77,10 @@ export default function VideoEditor() {
     { id: 'retro', name: 'Retro Synthwave', glow: '0 0 30px rgba(245, 158, 11, 0.4)' }
   ];
 
+  const currentLangObj = LANGUAGES.find(l => l.code === targetLanguage) || LANGUAGES[0];
+  const currentDurationObj = DURATIONS.find(d => d.id === durationOption) || DURATIONS[0];
+  const availableVoiceovers = VOICEOVERS[targetLanguage] || VOICEOVERS['en'];
+
   const handleGenerateScriptVideo = () => {
     if (!scriptInput.trim()) return;
     setIsProcessingAi(true);
@@ -26,14 +88,13 @@ export default function VideoEditor() {
     setTimeout(() => {
       setSelectedPreset({
         id: 'custom-' + Date.now(),
-        title: 'AI Script: ' + scriptInput.slice(0, 20) + '...',
-        duration: '00:40',
+        title: 'AI Script (' + currentLangObj.name.split(' ')[0] + '): ' + scriptInput.slice(0, 20) + '...',
+        duration: currentDurationObj.display,
         category: 'AI Generated',
         previewColor: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
         subtitles: [
           { time: '00:01 - 00:05', text: scriptInput },
-          { time: '00:05 - 00:15', text: 'AI สร้างเอฟเฟกต์ภาพและถอดซับไตเติ้ลจากข้อความของคุณอัตโนมัติ' },
-          { time: '00:15 - 00:30', text: 'พร้อมส่งออกไฟล์ระดับ 4K HDR 60FPS ตึงๆ ในคลิกเดียว!' }
+          { time: '00:05 - ∞', text: `[${currentLangObj.name.split(' ')[0]}] AI ถอดซับไตเติ้ลภาษาและปรับความยาว ${currentDurationObj.display} เรียบร้อยแล้ว` }
         ]
       });
       setIsProcessingAi(false);
@@ -47,26 +108,49 @@ export default function VideoEditor() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px', gap: '20px', overflowY: 'auto' }}>
-      {/* Header Info */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Header Info Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Film size={24} color="#06b6d4" />
-            AllInStudio Video Studio (ตัดต่อคลิปด้วย AI)
+            AllInStudio Video Studio
+            <span className="badge-pink" style={{ fontSize: '0.75rem' }}>♾️ ไม่จำกัดความยาว (Unlimited Duration)</span>
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-            แปลงสคริปต์/คลิปวิดีโอเป็นผลงานระดับมืออาชีพด้วย AI ถอดซับ ออโต้คัต และปรับเอฟเฟกต์ตึงๆ
+            ตัดต่อคลิปสั้น วิดีโอยาว และภาพยนตร์ได้แบบไม่จำกัดความยาว พร้อมระบบสลับภาษา & ถอดซับอัตโนมัติ 8+ ภาษา
           </p>
         </div>
 
-        <button
-          onClick={handleRender}
-          className="btn-cyan"
-          style={{ padding: '10px 20px' }}
-        >
-          {rendered ? <Check size={18} /> : <Download size={18} />}
-          <span>{rendered ? 'เรนเดอร์สำเร็จ (4K ready)' : 'ส่งออกวิดีโอ 4K'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Language Selector Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <Globe size={16} color="#06b6d4" />
+            <select
+              value={targetLanguage}
+              onChange={(e) => {
+                setTargetLanguage(e.target.value);
+                const firstVoice = (VOICEOVERS[e.target.value] || [])[0];
+                if (firstVoice) setVoiceGender(firstVoice.id);
+              }}
+              style={{ background: 'transparent', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+            >
+              {LANGUAGES.map(l => (
+                <option key={l.code} value={l.code} style={{ background: '#0f172a', color: '#fff' }}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={handleRender}
+            className="btn-cyan"
+            style={{ padding: '10px 20px' }}
+          >
+            {rendered ? <Check size={18} /> : <Download size={18} />}
+            <span>{rendered ? 'เรนเดอร์สำเร็จ (4K Ready)' : 'ส่งออกวิดีโอ 4K'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Workspace Grid */}
@@ -93,9 +177,14 @@ export default function VideoEditor() {
               <span className="badge-cyan" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
                 4K HDR • 60FPS
               </span>
-              <span className="badge-pink" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
-                Filter: {filters.find(f => f.id === activeFilter)?.name}
-              </span>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <span className="badge-neon" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+                  🌐 {currentLangObj.name.split(' ')[0]}
+                </span>
+                <span className="badge-pink" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+                  ⏱️ {currentDurationObj.display}
+                </span>
+              </div>
             </div>
 
             {/* Simulated Animated Video Content Graphic */}
@@ -121,8 +210,8 @@ export default function VideoEditor() {
 
             {/* Live Subtitle Overlay Ticker */}
             <div style={{
-              background: subtitleStyle === 'neon' 
-                ? 'rgba(6, 182, 212, 0.85)' 
+              background: subtitleStyle === 'neon'
+                ? 'rgba(6, 182, 212, 0.85)'
                 : subtitleStyle === 'anime'
                 ? 'rgba(236, 72, 153, 0.85)'
                 : 'rgba(15, 23, 42, 0.9)',
@@ -136,7 +225,7 @@ export default function VideoEditor() {
               zIndex: 10,
               backdropFilter: 'blur(8px)'
             }}>
-              🗣️ {selectedPreset.subtitles[0]?.text || 'AI Subtitle Ready'}
+              🗣️ [{currentLangObj.name.split(' ')[0]}] {currentLangObj.defaultSub}
             </div>
           </div>
 
@@ -151,49 +240,107 @@ export default function VideoEditor() {
                 {isPlaying ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
               </button>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                {isPlaying ? '00:12' : '00:00'} / {selectedPreset.duration}
+                {isPlaying ? '00:12' : '00:00'} / {currentDurationObj.display}
               </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="badge-neon">Auto Subtitle ON</span>
-              <span className="badge-cyan">AI Trim 95%</span>
+              <span className="badge-neon">Auto Subtitle ({currentLangObj.name.split(' ')[0]})</span>
+              <span className="badge-pink">Duration: Unlimited ∞</span>
             </div>
           </div>
 
           {/* Video Timeline Track Visualizer */}
           <div style={{ background: 'rgba(15, 23, 42, 0.8)', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-              <span><Layers size={14} inline /> Track Visualizer</span>
-              <span>Timeline: 00:00 - {selectedPreset.duration}</span>
+              <span><Layers size={14} inline /> Track Visualizer (ไม่จำกัดความยาว)</span>
+              <span>Timeline Length: 00:00 - {currentDurationObj.display}</span>
             </div>
 
             {/* Video Track Line */}
             <div style={{ height: '24px', background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%)', borderRadius: '6px', marginBottom: '6px', opacity: 0.8, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff', fontWeight: 600 }}>
-              📹 Video: {selectedPreset.title}
+              📹 Video Track: {selectedPreset.title} [{currentDurationObj.display}]
             </div>
             {/* Subtitle Track Line */}
             <div style={{ height: '20px', background: 'rgba(236, 72, 153, 0.4)', borderRadius: '6px', marginBottom: '6px', border: '1px border rgba(236, 72, 153, 0.6)', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff' }}>
-              💬 AI Subtitles (Auto-aligned)
+              💬 AI Subtitles ({currentLangObj.name.split(' ')[0]} - Auto Aligned)
             </div>
             {/* Audio Track Line */}
             <div style={{ height: '20px', background: 'rgba(16, 185, 129, 0.3)', borderRadius: '6px', display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '0.7rem', color: '#fff' }}>
-              🔊 Voiceover ({voiceGender})
+              🔊 Voiceover ({availableVoiceovers.find(v => v.id === voiceGender)?.label || voiceGender})
             </div>
           </div>
         </div>
 
         {/* Right Side: AI Tools & Controls Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Duration Selector */}
+          <div className="glass-panel" style={{ padding: '18px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={16} color="#ec4899" />
+              กำหนดความยาวคลิป (Video Duration)
+            </h3>
+            <select
+              value={durationOption}
+              onChange={(e) => setDurationOption(e.target.value)}
+              style={{ width: '100%', fontSize: '0.85rem', marginBottom: '6px' }}
+            >
+              {DURATIONS.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+            <div style={{ fontSize: '0.75rem', color: '#34d399', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <InfinityIcon size={12} /> สามารถนำคลิปความยาวเท่าใดก็ได้มาเรนเดอร์ ไม่จำกัดความยาว
+            </div>
+          </div>
+
+          {/* Language Switcher Section */}
+          <div className="glass-panel" style={{ padding: '18px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Globe size={16} color="#06b6d4" />
+              เปลี่ยนภาษาถอดซับ & พากย์เสียง
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {LANGUAGES.map(l => (
+                <button
+                  key={l.code}
+                  onClick={() => {
+                    setTargetLanguage(l.code);
+                    const firstVoice = (VOICEOVERS[l.code] || [])[0];
+                    if (firstVoice) setVoiceGender(firstVoice.id);
+                  }}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '10px',
+                    border: targetLanguage === l.code ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)',
+                    background: targetLanguage === l.code ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255,255,255,0.03)',
+                    color: targetLanguage === l.code ? '#22d3ee' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  {l.name.split(' ')[0]} {l.name.split(' ')[1]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* AI Script-to-Video Generator */}
           <div className="glass-panel" style={{ padding: '18px' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '8px', color: '#fff' }}>
               <Wand2 size={16} color="#8b5cf6" />
-              AI Script-to-Video
+              AI Script-to-Video ({currentLangObj.name.split(' ')[0]})
             </h3>
             <textarea
               rows={3}
-              placeholder="กรอกบทพูด/สคริปต์คลิปของคุณ... AI จะสร้างคลิปพร้อมถอดซับอัตโนมัติ"
+              placeholder={`กรอกบทพูด/สคริปต์คลิปของคุณในภาษา ${currentLangObj.name}... AI จะสร้างคลิปพร้อมถอดซับให้อัตโนมัติ`}
               value={scriptInput}
               onChange={(e) => setScriptInput(e.target.value)}
               style={{ width: '100%', fontSize: '0.85rem', marginBottom: '10px', resize: 'none' }}
@@ -205,8 +352,27 @@ export default function VideoEditor() {
               style={{ width: '100%', justifyContent: 'center' }}
             >
               <Sparkles size={16} />
-              <span>{isProcessingAi ? 'AI กำลังเจนคลิป...' : 'เจนคลิปจาก Script'}</span>
+              <span>{isProcessingAi ? 'AI กำลังเจนคลิป...' : `เจนคลิปภาษา ${currentLangObj.name.split(' ')[0]}`}</span>
             </button>
+          </div>
+
+          {/* AI Voiceover Selector */}
+          <div className="glass-panel" style={{ padding: '18px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Volume2 size={16} color="#10b981" />
+              เสียงพากย์ AI ({currentLangObj.name.split(' ')[0]})
+            </h3>
+            <select
+              value={voiceGender}
+              onChange={(e) => setVoiceGender(e.target.value)}
+              style={{ width: '100%', fontSize: '0.85rem' }}
+            >
+              {availableVoiceovers.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* AI Visual Filters Selection */}
@@ -231,57 +397,6 @@ export default function VideoEditor() {
                   }}
                 >
                   {filter.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* AI Voiceover Selector */}
-          <div className="glass-panel" style={{ padding: '18px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Volume2 size={16} color="#10b981" />
-              เสียงพากย์ AI (Voiceover)
-            </h3>
-            <select
-              value={voiceGender}
-              onChange={(e) => setVoiceGender(e.target.value)}
-              style={{ width: '100%', fontSize: '0.85rem' }}
-            >
-              <option value="th-male">🇹🇭 เสียงพากย์ ชายไทย (Smart Executive)</option>
-              <option value="th-female">🇹🇭 เสียงพากย์ หญิงไทย (Smooth Professional)</option>
-              <option value="en-male">🇺🇸 English Male (Cyberpunk Narrative)</option>
-              <option value="en-female">🇺🇸 English Female (Tech Reviewer)</option>
-            </select>
-          </div>
-
-          {/* Preset Videos */}
-          <div className="glass-panel" style={{ padding: '18px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 10px 0', color: '#fff' }}>
-              📽️ ตัวอย่าง Preset คลิป
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {VIDEO_PRESETS.map(preset => (
-                <button
-                  key={preset.id}
-                  onClick={() => setSelectedPreset(preset)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    background: selectedPreset.id === preset.id ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.03)',
-                    border: selectedPreset.id === preset.id ? '1px solid #818cf8' : '1px solid rgba(255,255,255,0.06)',
-                    color: '#fff',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{preset.title}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>{preset.category} • {preset.duration}</div>
-                  </div>
-                  <Eye size={14} color="var(--text-muted)" />
                 </button>
               ))}
             </div>

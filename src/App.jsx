@@ -3,7 +3,6 @@ import './index.css';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import ApiKeyModal from './components/ApiKeyModal';
-import ChatView from './components/ChatModule/ChatView';
 import VideoEditor from './components/VideoModule/VideoEditor';
 import ImageStudio from './components/ImageModule/ImageStudio';
 import SlideStudio from './components/SlideModule/SlideStudio';
@@ -11,7 +10,7 @@ import { AI_MODELS } from './mock/aiData';
 import { getSavedApiKey, initGeminiClient } from './services/geminiService';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('video');
   const [collapsed, setCollapsed] = useState(false);
   const [selectedModel, setSelectedModel] = useState(AI_MODELS[0].id);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
@@ -32,18 +31,11 @@ export default function App() {
   }, []);
 
   const handleResetSession = () => {
-    setActiveTab(activeTab); // no-op to force re-render; extend as needed
+    setActiveTab(activeTab);
   };
 
   const renderModule = () => {
     switch (activeTab) {
-      case 'chat':
-        return (
-          <ChatView
-            selectedModel={selectedModel}
-            onOpenApiKey={() => setShowApiKeyModal(true)}
-          />
-        );
       case 'video':
         return <VideoEditor />;
       case 'image':
@@ -51,12 +43,7 @@ export default function App() {
       case 'slide':
         return <SlideStudio />;
       default:
-        return (
-          <ChatView
-            selectedModel={selectedModel}
-            onOpenApiKey={() => setShowApiKeyModal(true)}
-          />
-        );
+        return <VideoEditor />;
     }
   };
 

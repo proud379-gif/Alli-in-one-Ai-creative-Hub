@@ -14,9 +14,8 @@ import {
 
 export default function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed }) {
   const navItems = [
-    { id: 'chat', label: 'AI Chat GPT', icon: MessageSquare, badge: 'PRO', desc: 'สนทนา คุยแชท เขียนโค้ด' },
-    { id: 'video', label: 'AI Video Studio', icon: Video, badge: 'HOT', desc: 'ตัดต่อคลิป ถอดซับอัตโนมัติ' },
-    { id: 'image', label: 'AI Image Studio', icon: ImageIcon, badge: 'NEW', desc: 'เจนภาพ ลบวัตถุ 4K' },
+    { id: 'video', label: 'AI Video Studio', icon: Video, badge: 'HOT', desc: 'ตัดต่อคลิปไม่จำกัดความยาว' },
+    { id: 'image', label: 'AI Image Studio', icon: ImageIcon, badge: 'NEW', desc: 'เจนภาพ & แต่งรูปทุกประเภท' },
     { id: 'slide', label: 'AI Slide Deck', icon: Presentation, badge: 'AI', desc: 'ออกแบบสไลด์ Presentation' }
   ];
 

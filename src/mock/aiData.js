@@ -20,35 +20,35 @@ export const VIDEO_PRESETS = [
   {
     id: 'cyber-vlog',
     title: 'Neon Cyberpunk Vlog',
-    duration: '00:45',
+    duration: 'ไม่จำกัดความยาว (Unlimited ∞)',
     category: 'Vlog & Reels',
     previewColor: 'linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%)',
     subtitles: [
-      { time: '00:01 - 00:05', text: 'สวัสดีครับทุกคน! วันนี้เราจะมาลองใช้ AI ตัดต่อคลิประดับตึงๆ' },
-      { time: '00:05 - 00:12', text: 'เพียงป้อนข้อความ AI ก็สร้างซับไตเติ้ล + ใส่ออพชัน Cyberpunk Glow ให้อัตโนมัติ' },
-      { time: '00:12 - 00:20', text: 'ประหยัดเวลาการตัดต่อไปกว่า 90% งานเสร็จไวใน 1 นาที!' }
+      { time: '00:01 - 00:05', text: 'สวัสดีครับทุกคน! ยินดีต้อนรับสู่ระบบตัดต่อวิดีโอแบบไม่จำกัดความยาว' },
+      { time: '00:05 - 00:30', text: 'รองรับการสร้างและถอดซับไตเติ้ลอัตโนมัติหลายภาษา ไม่ว่าจะเป็นคลิปสั้น หรือวิดีโอยาวหลายชั่วโมง' },
+      { time: '00:30 - ∞', text: 'AI พร้อมตัดต่อ ปรับเอฟเฟกต์ และใส่ซับไตเติ้ลภาษาที่คุณเลือกอย่างสมบูรณ์แบบ!' }
     ]
   },
   {
     id: 'ai-tech-review',
     title: 'AI Tech Unboxing 4K',
-    duration: '01:15',
+    duration: 'ไม่จำกัดความยาว (Unlimited ∞)',
     category: 'Product Review',
     previewColor: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
     subtitles: [
-      { time: '00:01 - 00:06', text: 'รีวิว AI Suite ใหม่ล่าสุด NovaAI Studio 2026' },
-      { time: '00:06 - 00:14', text: 'มาพร้อมโมดูลตัดต่อวิดีโอแต่งรูปและทำสไลด์แบบอัตโนมัติ' }
+      { time: '00:01 - 00:10', text: 'Full Review of AllInStudio Video Suite - Unlimited Duration & Multi-language' },
+      { time: '00:10 - ∞', text: 'Create unlimited length videos with instant AI auto-subtitles in any language.' }
     ]
   },
   {
     id: 'anime-mv',
     title: 'Synthwave Anime Reel',
-    duration: '00:30',
+    duration: 'ไม่จำกัดความยาว (Unlimited ∞)',
     category: 'Anime & Music',
     previewColor: 'linear-gradient(135deg, #ec4899 0%, #f59e0b 100%)',
     subtitles: [
-      { time: '00:01 - 00:04', text: '🎵 Beat dropping with AI Anime Style Transfer...' },
-      { time: '00:04 - 00:10', text: 'แปลงฟูเทจธรรมดาให้กลายเป็นอนิเมะญี่ปุ่นสุดอลังการ' }
+      { time: '00:01 - 00:05', text: '🎵 Beat dropping with AI Anime Style Transfer...' },
+      { time: '00:05 - ∞', text: 'Convert any length footage into high quality anime style.' }
     ]
   }
 ];

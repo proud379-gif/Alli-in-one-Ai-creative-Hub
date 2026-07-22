@@ -5,9 +5,8 @@ import { Sparkles, Cpu, RotateCcw, Activity } from 'lucide-react';
 export default function Navbar({ activeTab, selectedModel, setSelectedModel, onResetSession }) {
   const getTabTitle = () => {
     switch (activeTab) {
-      case 'chat': return { title: '💬 AI Chat Hub (ChatGPT Ultra)', subtitle: 'คุยแชท ลอจิก แก้โจทย์ เขียนโค้ดแบบไร้ขีดจำกัด' };
-      case 'video': return { title: '🎥 AI Video Studio', subtitle: 'ตัดต่อคลิป ถอดซับอัตโนมัติ ใส่ฟิลเตอร์ Cyberpunk' };
-      case 'image': return { title: '🎨 AI Image Studio', subtitle: 'สร้างรูปภาพ แต่งรูป ลบวัตถุ และ Upscale 4K' };
+      case 'video': return { title: '🎥 AI Video Studio', subtitle: 'ตัดต่อคลิปไม่จำกัดความยาว • ถอดซับหลายภาษาอัตโนมัติ' };
+      case 'image': return { title: '🎨 AI Image Studio', subtitle: 'สร้างรูปภาพ แต่งรูปทุกประเภท ลบวัตถุ และ Upscale 4K' };
       case 'slide': return { title: '📊 AI Slide Deck Designer', subtitle: 'ออกแบบสไลด์ Presentation สวยงามตึงๆ อัตโนมัติ' };
       default: return { title: 'AllInStudio', subtitle: 'Ultra AI Suite' };
     }
